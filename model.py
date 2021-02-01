@@ -98,6 +98,7 @@ class PoincareEmbedding(nn.Module):
         super(PoincareEmbedding, self).__init__()
 
         self.dim = dim
+        print("dim: " + self.dim.__str__())
         self.size = size
         self.lt = nn.Embedding(size, dim, max_norm=max_norm)
         self.lt.weight.data.uniform_(-1e-4, 1e-4)
@@ -121,7 +122,11 @@ class PoincareEmbedding(nn.Module):
         if cuda:
             self.lt.cuda()
 
-    def forward(self, inputs):
+    # Added annotation to prevent deprecation warning
+    # inputs substitution inputs -> *inputs
+    @staticmethod 
+    def forward(self, *inputs):
+        print("dim 2: " + self.dim.__str__())
         embs_all = self.lt.weight.unsqueeze(0)
         embs_all = embs_all.expand(len(inputs), self.size, self.dim)
 
