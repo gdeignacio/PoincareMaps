@@ -45,34 +45,39 @@ def poincare_root(root_name, labels, features):
 
 
 class PoincareDistance(Function):
-    boundary = 1 - eps
-
-    def grad(self, x, v, sqnormx, sqnormv, sqdist):
+    
+    #boundary = 1 - eps
+    @staticmethod
+    def grad(x, v, sqnormx, sqnormv, sqdist):
         alpha = (1 - sqnormx)
         beta = (1 - sqnormv)
         z = 1 + 2 * sqdist / (alpha * beta)
         a = ((sqnormv - 2 * torch.sum(x * v, dim=-1) + 1) /
-             torch.pow(alpha, 2)).unsqueeze(-1).expand_as(x)
+            torch.pow(alpha, 2)).unsqueeze(-1).expand_as(x)
         a = a * x - v / alpha.unsqueeze(-1).expand_as(v)
         z = torch.sqrt(torch.pow(z, 2) - 1)
         z = torch.clamp(z * beta, min=eps).unsqueeze(-1)
         return 4 * a / z.expand_as(x)
 
-    def forward(self, u, v):
-        self.save_for_backward(u, v)
-        self.squnorm = torch.clamp(torch.sum(u * u, dim=-1), 0, self.boundary)
-        self.sqvnorm = torch.clamp(torch.sum(v * v, dim=-1), 0, self.boundary)
-        self.sqdist = torch.sum(torch.pow(u - v, 2), dim=-1)
-        x = self.sqdist / ((1 - self.squnorm) * (1 - self.sqvnorm)) * 2 + 1
+    @staticmethod
+    def forward(ctx, u, v):
+        ctx.boundary=1-eps
+        ctx.save_for_backward(u, v)
+        ctx.squnorm = torch.clamp(torch.sum(u * u, dim=-1), 0, ctx.boundary)
+        ctx.sqvnorm = torch.clamp(torch.sum(v * v, dim=-1), 0, ctx.boundary)
+        ctx.sqdist = torch.sum(torch.pow(u - v, 2), dim=-1)
+        x = ctx.sqdist / ((1 - ctx.squnorm) * (1 - ctx.sqvnorm)) * 2 + 1
         # arcosh
         z = torch.sqrt(torch.pow(x, 2) - 1)
         return torch.log(x + z)
 
-    def backward(self, g):
-        u, v = self.saved_tensors
+    @staticmethod
+    def backward(ctx, g):
+        u, v = ctx.saved_tensors
         g = g.unsqueeze(-1)
-        gu = self.grad(u, v, self.squnorm, self.sqvnorm, self.sqdist)
-        gv = self.grad(v, u, self.sqvnorm, self.squnorm, self.sqdist)
+        ctx.grad=PoincareDistance.grad
+        gu = ctx.grad(u, v, ctx.squnorm, ctx.sqvnorm, ctx.sqdist)
+        gv = ctx.grad(v, u, ctx.sqvnorm, ctx.squnorm, ctx.sqdist)
         return g.expand_as(gu) * gu, g.expand_as(gv) * gv
 
     
@@ -98,7 +103,6 @@ class PoincareEmbedding(nn.Module):
         super(PoincareEmbedding, self).__init__()
 
         self.dim = dim
-        print("dim: " + self.dim.__str__())
         self.size = size
         self.lt = nn.Embedding(size, dim, max_norm=max_norm)
         self.lt.weight.data.uniform_(-1e-4, 1e-4)
@@ -122,18 +126,17 @@ class PoincareEmbedding(nn.Module):
         if cuda:
             self.lt.cuda()
 
-    # Added annotation to prevent deprecation warning
-    # inputs substitution inputs -> *inputs
-    @staticmethod 
-    def forward(self, *inputs):
-        print("dim 2: " + self.dim.__str__())
+    def forward(self, inputs):
+
         embs_all = self.lt.weight.unsqueeze(0)
         embs_all = embs_all.expand(len(inputs), self.size, self.dim)
 
         embs_inputs = self.lt(inputs).unsqueeze(1)
         embs_inputs = embs_inputs.expand_as(embs_all)
 
-        dists = self.dist()(embs_inputs, embs_all).squeeze(-1)
+        dst = self.dist().apply
+        dists = dst(embs_inputs, embs_all).squeeze(-1)
+        #dists = self.dist()(embs_inputs, embs_all).squeeze(-1)
 
         if self.lossfnname == 'kl':
             if self.Qdist == 'laplace':

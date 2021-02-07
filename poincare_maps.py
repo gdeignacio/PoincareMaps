@@ -73,7 +73,7 @@ def plot_poincare_disc(x, labels=None, title_name=None,
                         data=df, ax=ax, s=ms)
         
         if leg:
-            ax.legend(fontsize=fs, loc='outside', bbox_to_anchor=bbox, facecolor='white')
+            ax.legend(fontsize=fs, loc='best', bbox_to_anchor=bbox, facecolor='white')
         else:
             ax.legend_.remove()
             

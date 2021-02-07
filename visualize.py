@@ -78,7 +78,8 @@ def plot_poincare_disc(x, labels=None, labels_name='labels', labels_order=None,
                         alpha=1.0, edgecolor="none",
                         data=df, ax=ax, s=ms)
 
-        ax.legend(fontsize=fs, loc='outside', bbox_to_anchor=bbox)
+        ax.legend(fontsize=fs, loc='best', bbox_to_anchor=bbox)
+        #ax.legend(fontsize=fs, loc='outside', bbox_to_anchor=bbox)
             
     else:
         sns.scatterplot(x="pm1", y="pm2",
