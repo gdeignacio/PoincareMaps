@@ -107,9 +107,11 @@ def plot_poincare_disc(x, labels=None, title_name=None,
                 i = ix_l[np.argmin(Dl.sum(axis=0))]
                 labels_pos[l] = i
 
-        for l in labels_list:    
+        print('Longitud lista:' + str(np.unique(labels)) + ' '  + str(np.unique(labels_text)) + ' ' + str(labels_pos) )
+        for l in labels_list:
+            print('Etiqueta :' + l)
             ax.text(x[labels_pos[l], 0], x[labels_pos[l], 1], l, fontsize=fs)
-
+ 
     ax.set_ylim([-1.01, 1.01])
     ax.set_xlim([-1.01, 1.01]) 
 
